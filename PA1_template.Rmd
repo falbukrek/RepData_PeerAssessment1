@@ -5,18 +5,82 @@ output:
     keep_md: true
 ---
 
+```{r setup, echo = FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
 
 ## Loading and preprocessing the data
+Data is unzipped and loaded via read.csv(). Columns are cast into correct data types during the import.
+```{r}
+unzip("activity.zip")
+activity <- read.csv("activity.csv", header = TRUE, colClasses = c("integer", "Date", "integer"))
+
+# quick display of the loaded data
+str(activity)
+```
+It looks like we have some missing data. Let's look at a summary to get a sense of the values we have for each field:
+```{r}
+summary(activity)
+
+```
+
+We only have missing values for the *steps* field. 
+`r formatC( mean(is.na(activity$steps)) * 100, format = "f", digits = 1)`% of these values are missing.
 
 
 
 ## What is mean total number of steps taken per day?
 
+1. Calculate the total number of steps taken by date.
+1. Calculate the mean and the median statistics.
+1. Plot a histogram of steps per day.
 
+``` {r}
+# compute total steps taken for each date
+steps_by_date <- activity %>%
+    group_by(date) %>%
+    summarise(total_steps = sum(steps, na.rm = TRUE))
+
+# compute the mean and median across all days
+mean_steps_per_day <- mean(steps_by_date$total_steps)
+median_steps_per_day <- median(steps_by_date$total_steps)
+
+# draw a histogram with mean and median annotated
+ggplot(steps_by_date, aes(x = total_steps)) +
+    geom_histogram(bins = 8, colour = 1, fill = "gray") + 
+    geom_vline(mapping = aes(xintercept = mean_steps_per_day, color = "mean"), linetype = "dashed") + 
+    geom_vline(mapping = aes(xintercept = median_steps_per_day, color = "median"), linetype = "dashed") +
+    scale_color_manual(name = "Statistics", values = c(median = "blue", mean = "red")) +
+    labs(title = "Histogram of Steps per Day", x = "Total Steps per Day")
+
+```
+
+The mean total number of steps taken per day is `r formatC(mean_steps_per_day, format = "f", digits = 1)` steps.  
+The median total number of steps taken per day is `r formatC(median_steps_per_day, format = "f", digits = 1)` steps.
 
 ## What is the average daily activity pattern?
+1. Compute the average steps for each 5 minute interval.
+2. Plot them on a line graph.
 
+``` {r}
+# get the mean for each interval across all days
+average_steps_by_interval <- activity %>%
+    group_by(interval) %>%
+    summarize(avg_steps = mean(steps, na.rm = TRUE))
 
+# find the index of the maximum average steps
+max_index <- which.max(average_steps_by_interval$avg_steps)
+
+# plot a line chart illustrating average steps taken for each time period
+ggplot(average_steps_by_interval, mapping = aes(x = interval, y = avg_steps)) + 
+    geom_line() +
+    geom_vline(mapping = aes(xintercept = average_steps_by_interval$interval[max_index], color = "maxinterval"), linetype = "dashed") +
+    scale_color_manual(name = "", values = c(maxinterval = "blue")) +
+    labs(title = "Average Steps by Interval", x = "Interval (minute number)", y = "Average Steps")
+```
+
+Interval #`r average_steps_by_interval$interval[max_index]` has the highest average at `r formatC(average_steps_by_interval$avg_steps[max_index], format = "f", digits = 1)` steps.
 
 ## Imputing missing values
 
