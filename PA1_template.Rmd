@@ -146,3 +146,32 @@ Interval #`r average_steps_by_interval$interval[max_index]` has the highest aver
     values across the board.
     
 ## Are there differences in activity patterns between weekdays and weekends?
+
+1. Compute the day name for each date, and add a flag to indicate if it's a weekend.
+
+    ``` {r}
+    imputed_activity_with_days <- imputed_activity %>% 
+        mutate(weekday = weekdays(date), daytype = ifelse(weekday %in% c("Saturday", "Sunday"), 
+                                                          "Weekend", "Weekday"))    
+    ```
+    
+1. Calculate average steps for each interval and day type
+    ``` {r}
+    # get the mean for each interval across all days
+    imputed_average_steps_by_interval_weekend <- imputed_activity_with_days %>%
+        group_by(interval, daytype) %>%
+        summarize(avg_steps = mean(steps))
+    ```
+    
+1. Plot weekends and weekdays on two stacked panels:
+    ``` {r}
+    ggplot(imputed_average_steps_by_interval_weekend, mapping = aes(x = interval, y = avg_steps)) + 
+        geom_line() +
+        facet_grid(rows = vars(daytype)) +
+        labs(title = "Average Steps by Interval", subtitle = "Comparing Weekdays to Weekends", x = "Interval (minute number)", y = "Average Steps")
+    ```
+
+Based on the chart above we observe that:  
+1. Activity starts to pick up later in the day on weekends. Perhaps people are sleeping in.  
+2. People are more active (taking more steps) during their awake times on weekends.  
+3. The peak activity level is higher on weekdays. The peak occurs around the same time interval on weekends, but the average value is lower.  
