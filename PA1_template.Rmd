@@ -19,15 +19,6 @@ activity <- read.csv("activity.csv", header = TRUE, colClasses = c("integer", "D
 # quick display of the loaded data
 str(activity)
 ```
-It looks like we have some missing data. Let's look at a summary to get a sense of the values we have for each field:
-```{r}
-summary(activity)
-
-```
-
-We only have missing values for the *steps* field. 
-`r formatC( mean(is.na(activity$steps)) * 100, format = "f", digits = 1)`% of these values are missing.
-
 
 
 ## What is mean total number of steps taken per day?
@@ -49,9 +40,10 @@ median_steps_per_day <- median(steps_by_date$total_steps)
 # draw a histogram with mean and median annotated
 ggplot(steps_by_date, aes(x = total_steps)) +
     geom_histogram(bins = 8, colour = 1, fill = "gray") + 
-    geom_vline(mapping = aes(xintercept = mean_steps_per_day, color = "mean"), linetype = "dashed") + 
-    geom_vline(mapping = aes(xintercept = median_steps_per_day, color = "median"), linetype = "dashed") +
+    geom_vline(mapping = aes(xintercept = mean_steps_per_day, color = "mean", linetype = "mean")) + 
+    geom_vline(mapping = aes(xintercept = median_steps_per_day, color = "median", linetype = "median")) +
     scale_color_manual(name = "Statistics", values = c(median = "blue", mean = "red")) +
+    scale_linetype_manual(name = "Statistics", values =c(median = "dashed", mean = "dotted")) + 
     labs(title = "Histogram of Steps per Day", x = "Total Steps per Day")
 
 ```
@@ -84,6 +76,73 @@ Interval #`r average_steps_by_interval$interval[max_index]` has the highest aver
 
 ## Imputing missing values
 
+1. Calculate and report the total number of missing values in the dataset  
+    
+    Get a summary of the dataset to see which field have NAs.
+    ```{r}
+    summary(activity)
+    ```
+    
+    `r sum(is.na(activity$steps))` rows of data have missing values for the *steps* field.
+    This represents `r formatC( mean(is.na(activity$steps)) * 100, format = "f", digits = 1)`% of the data
+    is missing values.
 
+1. Devise a strategy for filling in all of the missing values in the dataset.
 
+    To impute the missing *steps* data, we will substitute the mean steps across all days for the corresponding
+    5-minute interval.
+
+1. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+    
+    ``` {r}
+    
+    # for each step with an NA value, mutate it to the avg_steps value from the average_steps_by_interval
+    # dataframe we computed earlier.
+    imputed_activity <- activity %>%
+        mutate(steps = ifelse(is.na(steps), 
+                              subset(average_steps_by_interval, 
+                                     average_steps_by_interval$interval == interval)$avg_steps, 
+                              steps))
+    
+    # show another summary for comparison
+    summary(imputed_activity)
+    ```
+
+1. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+    ``` {r}
+    # compute total steps taken for each date
+    imputed_steps_by_date <- imputed_activity %>%
+        group_by(date) %>%
+        summarise(total_steps = sum(steps, na.rm = TRUE))
+    
+    # compute the mean and median across all days
+    imputed_mean_steps_per_day <- mean(imputed_steps_by_date$total_steps)
+    imputed_median_steps_per_day <- median(imputed_steps_by_date$total_steps)
+    
+    # draw a histogram with mean and median annotated
+    ggplot(imputed_steps_by_date, aes(x = total_steps)) +
+        geom_histogram(bins = 8, colour = 1, fill = "gray") + 
+        geom_vline(mapping = aes(xintercept = imputed_mean_steps_per_day, color = "mean", linetype = "mean")) + 
+        geom_vline(mapping = aes(xintercept = imputed_median_steps_per_day, color = "median", linetype = "median")) +
+        scale_color_manual(name = "Statistics", values = c(median = "blue", mean = "red")) +
+        scale_linetype_manual(name = "Statistics", values =c(median = "dashed", mean = "dotted")) + 
+        labs(title = "Histogram of Imputed Steps per Day", x = "Total Steps per Day")
+        
+    ```
+    
+    Let's compare the two sets of medians and means.  
+    The per day steps statistics for when NAs are removed from the dataset:
+    ``` {r}
+    summary(steps_by_date$total_steps)
+    ```
+    
+    The per day steps statistics for when NAs are imputed:
+    ``` {r}
+    summary(imputed_steps_by_date$total_steps)
+    ```
+    
+    As a result of this imputing strategy both the mean and median moved up, because we added more non-zero
+    values across the board.
+    
 ## Are there differences in activity patterns between weekdays and weekends?
